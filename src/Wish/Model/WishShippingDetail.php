@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -17,27 +17,43 @@
 
 namespace Wish\Model;
 
-class WishShippingDetail{
+/**
+ * Class WishShippingDetail
+ *
+ * @package Wish\Model
+ */
+class WishShippingDetail
+{
 
-  public function __construct($sa){
+    /**
+     * WishShippingDetail constructor.
+     *
+     * @param $sa
+     */
+    public function __construct($sa)
+    {
+        $vars = get_object_vars($sa);
 
-  
-    $vars = get_object_vars($sa);
-    foreach ($vars as $key=>$val){
-      $this->$key = $val;
+        foreach ($vars as $key => $val) {
+            $this->$key = $val;
+        }
     }
 
+    /**
+     * @param $keys
+     *
+     * @return array
+     */
+    public function getParams($keys)
+   {
+        $params = [];
+
+        foreach($keys as $key) {
+           if(isset($this->$key)) {
+               $params[$key] = $this->$key;
+            }
+        }
+
+        return $params;
   }
-
-   public function getParams($keys){
-    $params = array();
-    foreach($keys as $key){
-      if(isset($this->$key)){
-        $params[$key] = $this->$key;
-      }
-    }
-    return $params;
-  }
-
-
 }

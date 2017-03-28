@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -17,7 +17,13 @@
 
 namespace Wish\Exception;
 
-class ServiceResponseException extends RuntimeException{
+/**
+ * Class ServiceResponseException
+ *
+ * @package Wish\Exception
+ */
+class ServiceResponseException extends RuntimeException
+{
 
   protected $response;
   protected $request;
@@ -25,50 +31,94 @@ class ServiceResponseException extends RuntimeException{
   protected $exceptionType;
   protected $exceptionCode;
 
-  public function __construct($message,$request,$response){
-    parent::__construct($message);
-    $this->request = $request;
-    $this->response = $response;
-  }
-  public function getExceptionCode(){
-    return $this->exceptionCode;
-  }
+    /**
+     * ServiceResponseException constructor.
+     *
+     * @param string $message
+     * @param mixed  $request
+     * @param mixed  $response
+     */
+    public function __construct($message, $request, $response)
+    {
+        parent::__construct($message);
+        $this->request = $request;
+        $this->response = $response;
+    }
 
-  public function getExceptionType(){
-    return $this->exceptionType;
-  }
+    /**
+     * @return mixed
+     */
+    public function getExceptionCode()
+    {
+        return $this->exceptionCode;
+    }
 
-  public function getRequest(){
-    return $this->request;
-  }
+    /**
+     * @return mixed
+     */
+    public function getExceptionType()
+    {
+        return $this->exceptionType;
+    }
 
-  public function setResponse($response){
-    $this->response = $response;
-  }
-  public function getResponse(){
-    return $this->response;
-  }
+    /**
+     * @return int
+     */
+    public function getRequest()
+    {
+        return $this->request;
+    }
 
-  public function getErrorMessage(){
-    return $this->response ? $this->response->getMessage() : null;
-  }
+    /**
+     * @param $response
+     */
+    public function setResponse($response)
+    {
+        $this->response = $response;
+    }
 
-  public function getStatusCode(){
-    return $this->response ? $this->response->getStatusCode() : null;
-  }
+    /**
+     * @return \Exception
+     */
+    public function getResponse()
+    {
+        return $this->response;
+    }
 
-  public function __toString(){
-    $message = get_class($this).': '
-     .'Message: '.$this->getMessage()."\n"
-     .'Status code: '.$this->getStatusCode()."\n"
-     .'Error message: '.$this->getErrorMessage()."\n"
-     .'Stack trace: '."\n";
-     foreach($this->getTrace() as $trace){
-      $message = $message.$trace['file'].' at '.$trace['function'].':'.
-        $trace['line']."\n";
-     }
-     return $message;
-  }
+    /**
+     * @return null|string
+     */
+    public function getErrorMessage()
+    {
+        return $this->response ? $this->response->getMessage() : null;
+    }
 
+    /**
+     * @return null
+     */
+    public function getStatusCode()
+    {
+        return $this->response ? $this->response->getStatusCode() : null;
+    }
 
+    /**
+     * String representation of the exception
+     * @link http://php.net/manual/en/exception.tostring.php
+     * @return string the string representation of the exception.
+     * @since 5.1.0
+     */
+    public function __toString()
+    {
+        $message = get_class($this).': '
+        .'Message: '.$this->getMessage()."\n"
+        .'Status code: '.$this->getStatusCode()."\n"
+        .'Error message: '.$this->getErrorMessage()."\n"
+        .'Stack trace: '."\n";
+
+        foreach($this->getTrace() as $trace) {
+            $message = $message.$trace['file'].' at '.$trace['function'].':'. $trace['line']."\n";
+        }
+
+        return $message;
+    }
 }

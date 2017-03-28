@@ -7,12 +7,22 @@
         {
             "name": "Wish",
             "homepage": "http://wish.com"
+        },
+        {
+            "name": "Alex Lushpai",
+            "email": "lushpai@gmail.com"
         }
     ],
     "license":"Apache-2.0",
     "minimum-stability": "dev",
     "require": {
         "php":">5.3.0"
+    },
+    "require-dev": {
+        "phpmd/phpmd": "2.5.*",
+        "squizlabs/php_codesniffer": "2.7.*",
+        "sebastian/phpdcd": "1.0.*",
+        "sebastian/phpcpd": "3.0.*"
     },
     "autoload": {
         "psr-0": {

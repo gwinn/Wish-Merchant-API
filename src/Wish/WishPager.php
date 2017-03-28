@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -16,30 +16,48 @@
  */
 namespace Wish;
 
-class WishPager{
-  
-  private $pagerData;
-  private $next;
-  private $prev;
+/**
+ * Class WishPager
+ *
+ * @package Wish
+ */
+class WishPager
+{
+    private $pagerData;
+    private $next;
+    private $prev;
 
-  public function __construct($pager){
-    $this->pagerData = $pager;
+    /**
+     * WishPager constructor.
+     *
+     * @param $pager
+     */
+    public function __construct($pager)
+    {
+        $this->pagerData = $pager;
 
-    if(isset($pager->next)){
-      $this->next = $pager->next;
+        if (isset($pager->next)) {
+            $this->next = $pager->next;
+        }
+
+        if (isset($pager->prev)) {
+            $this->prev = $pager->previous;
+        }
     }
-    if(isset($pager->prev)){
-      $this->prev = $pager->previous;
+
+    /**
+     * @return bool
+     */
+    public function hasNext()
+    {
+        return isset($this->next);
     }
-  }
 
-  public function hasNext(){
-    return isset($this->next);
-  }
-
-  public function hasPrev(){
-    return isset($this->prev);
-  }
-
-
+    /**
+     * @return bool
+     */
+    public function hasPrev()
+    {
+        return isset($this->prev);
+    }
 }

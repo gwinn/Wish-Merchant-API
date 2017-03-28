@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -17,31 +17,47 @@
 
 namespace Wish\Model;
 
-class WishTracker{
+/**
+ * Class WishTracker
+ *
+ * @package Wish\Model
+ */
+class WishTracker
+{
 
-  private $tracking_provider;
-  private $tracking_number;
-  private $ship_note;
+    private $tracking_provider;
+    private $tracking_number;
+    private $ship_note;
 
-  public function __construct($tracking_provider,$tracking_number=null,$ship_note=null){
+    /**
+     * WishTracker constructor.
+     *
+     * @param      $tracking_provider
+     * @param null $tracking_number
+     * @param null $ship_note
+     */
+    public function __construct($tracking_provider, $tracking_number=null, $ship_note=null)
+    {
 
-    $this->tracking_provider = $tracking_provider;
-    if($tracking_number)$this->tracking_number = $tracking_number;
-    if($ship_note)$this->ship_note = $ship_note;
-    
-
-  }
-
-   public function getParams(){
-    $keys = array('tracking_provider','tracking_number','ship_note');
-    $params = array();
-    foreach($keys as $key){
-      if(isset($this->$key)){
-        $params[$key] = $this->$key;
-      }
+        $this->tracking_provider = $tracking_provider;
+        if ($tracking_number) $this->tracking_number = $tracking_number;
+        if ($ship_note) $this->ship_note = $ship_note;
     }
-    return $params;
-  }
 
+    /**
+     * @return array
+     */
+    public function getParams()
+    {
+        $keys = ['tracking_provider','tracking_number','ship_note'];
+        $params = [];
 
+        foreach($keys as $key) {
+            if(isset($this->$key)) {
+                $params[$key] = $this->$key;
+            }
+        }
+
+        return $params;
+    }
 }

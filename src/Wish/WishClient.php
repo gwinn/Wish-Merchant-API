@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -24,262 +24,448 @@ use Wish\Model\WishProduct;
 use Wish\Model\WishProductVariation;
 use Wish\Model\WishOrder;
 use Wish\Model\WishTracker;
-use Wish\Model\WishReason;
-use Wish\Model\WishAddress;
 use Wish\Model\WishTicket;
+use Wish\Model\WishAddress;
 
+/**
+ * Class WishClient
+ *
+ * @package Wish
+ */
+class WishClient
+{
 
-class WishClient{
-  private $session;
-  private $products;
-  private $orders;
+    private $session;
 
-  const LIMIT = 50;
+    const LIMIT = 50;
 
-  public function __construct($access_token,$session_type='prod',$merchant_id=null){
-
-    $this->session = new WishSession($access_token,$session_type,$merchant_id);
-
-  }
-
-  public function getResponse($type,$path,$params=array()){
-
-    $request = new WishRequest($this->session,$type,$path,$params);
-    $response = $request->execute();
-    if($response->getStatusCode()==4000){
-      throw new UnauthorizedRequestException("Unauthorized access",
-        $request,
-        $response);
+    /**
+     * WishClient constructor.
+     *
+     * @param        $access_token
+     * @param string $session_type
+     * @param null   $merchant_id
+     */
+    public function __construct($access_token, $session_type='prod', $merchant_id = null)
+    {
+        $this->session = new WishSession($access_token, $session_type, $merchant_id);
     }
-    if($response->getStatusCode()==1015){
-      throw new UnauthorizedRequestException("Access Token expired",
-        $request,
-        $response);
+
+    /**
+     * @param       $type
+     * @param       $path
+     * @param array $params
+     *
+     * @return WishResponse
+     */
+    public function getResponse($type, $path, $params = [])
+    {
+
+        $request = new WishRequest($this->session, $type, $path, $params);
+        $response = $request->execute();
+
+        if ($response->getStatusCode() == 4000) {
+            throw new UnauthorizedRequestException("Unauthorized access", $request, $response);
+        }
+
+        if ($response->getStatusCode() == 1015) {
+            throw new UnauthorizedRequestException("Access Token expired", $request, $response);
+        }
+
+        if ($response->getStatusCode() == 1016) {
+            throw new UnauthorizedRequestException("Access Token revoked", $request, $response);
+        }
+
+        if ($response->getStatusCode() == 1000) {
+            throw new ServiceResponseException("Invalid parameter", $request, $response);
+        }
+
+        if ($response->getStatusCode() == 1002) {
+            throw new OrderAlreadyFulfilledException("Order has been fulfilled", $request, $response);
+        }
+
+        if ($response->getStatusCode() != 0) {
+            throw new ServiceResponseException("Unknown error", $request, $response);
+        }
+
+        return $response;
     }
-    if($response->getStatusCode()==1016){
-      throw new UnauthorizedRequestException("Access Token revoked",
-        $request,
-        $response);
+
+    /**
+     * @param       $method
+     * @param       $uri
+     * @param       $getClass
+     * @param array $params
+     *
+     * @return array
+     */
+    public function getResponseIter($method, $uri, $getClass, $params = [])
+    {
+        $start = 0;
+        $params['limit'] = static::LIMIT;
+        $class_arr = [];
+
+        do {
+        $params['start'] = $start;
+        $response = $this->getResponse($method, $uri, $params);
+
+        foreach($response->getData() as $class_raw) {
+            $class_arr[] = new $getClass($class_raw);
+        }
+
+        $start += static::LIMIT;
+
+        } while($response->hasMore());
+
+        return $class_arr;
     }
-    if($response->getStatusCode()==1000){
-      throw new ServiceResponseException("Invalid parameter",
-        $request,
-        $response);
+
+    /**
+     * @return string
+     */
+    public function authTest()
+    {
+        $response = $this->getResponse('GET', 'auth_test');
+
+        return $response->getData();
     }
-    if($response->getStatusCode()==1002){
-      throw new OrderAlreadyFulfilledException("Order has been fulfilled",
-        $request,
-        $response);
+
+    // PRODUCT
+
+    /**
+     * @param $id
+     *
+     * @return WishProduct
+     */
+    public function getProductById($id)
+    {
+        $params = ['id' => $id];
+        $response = $this->getResponse('GET', 'product', $params);
+
+        return new WishProduct($response->getData());
     }
-    if($response->getStatusCode()!=0){
-      throw new ServiceResponseException("Unknown error",
-        $request,
-        $response);
+
+    /**
+     * @param $object
+     *
+     * @return WishProduct
+     */
+    public function createProduct($object)
+    {
+        $response = $this->getResponse('POST', 'product/add', $object);
+
+        return new WishProduct($response->getData());
     }
-    return $response;
 
-  }
+    /**
+     * @param WishProduct $product
+     *
+     * @return string
+     */
+    public function updateProduct(WishProduct $product)
+    {
+        $params = $product->getParams([
+          'id',
+          'name',
+          'description',
+          'tags',
+          'brand',
+          'landing_page_url',
+          'upc',
+          'main_image',
+          'extra_images'
+        ]);
 
-  public function getResponseIter($method,$uri,$getClass,$params=array()){
-    $start = 0;
-    $params['limit'] = static::LIMIT;
-    $class_arr = array();
-    do{
-      $params['start']=$start;
-      $response = $this->getResponse($method,$uri,$params);
-      foreach($response->getData() as $class_raw){
-        $class_arr[] = new $getClass($class_raw);
-      }
-      $start += static::LIMIT;
-    }while($response->hasMore());
-    return $class_arr;
-  }
+        $response = $this->getResponse('POST', 'product/update', $params);
 
-  public function authTest(){
-    $response = $this->getResponse('GET','auth_test');
-    return "success";
-
-  }
-
-  // PRODUCT
-
-  public function getProductById($id){
-    $params = array('id'=>$id);
-    $response = $this->getResponse('GET','product',$params);
-    return new WishProduct($response->getData());
-  }
-
-  public function createProduct($object){
-    $response = $this->getResponse('POST','product/add',$object);
-    return new WishProduct($response->getData());
-  }
-
-  public function updateProduct(WishProduct $product){
-
-    $params = $product->getParams(array(
-      'id',
-      'name',
-      'description',
-      'tags',
-      'brand',
-      'landing_page_url',
-      'upc',
-      'main_image',
-      'extra_images'));
-
-    $response = $this->getResponse('POST','product/update',$params);
-
-    return "success";
-  }
-
-  public function enableProduct(WishProduct $product){
-    $this->enableProductById($product->id);
-  }
-
-  public function enableProductById($id){
-    $params = array('id'=>$id);
-    $response = $this->getResponse('POST','product/enable',$params);
-    return "success";
-  }
-
-  public function disableProduct(WishProduct $product){
-    $this->disableProductById($product->id);
-  }
-
-  public function disableProductById($id){
-    $params = array('id'=>$id);
-    $response = $this->getResponse('POST','product/disable',$params);
-    return "success";
-  }
-
-  public function getAllProducts(){
-    return $this->getResponseIter(
-      'GET',
-      'product/multi-get',
-      "Wish\Model\WishProduct");
-  }
-
-  public function removeExtraImages(WishProduct $product){
-    return $this->removeExtraImagesById($product->id);
-  }
-
-  public function removeExtraImagesById($id){
-    $params = array('id'=>$id);
-    $response = $this->getResponse('POST','product/remove-extra-images',$params);
-    return "success";
-  }
-
-  public function updateShippingById($id,$country,$price){
-    $params = array('id'=>$id,'country'=>$country,'price'=>$price);
-    $response = $this->getResponse('POST','product/update-shipping',$params);
-    return "success";
-  }
-
-  public function getShippingById($id,$country){
-    $params = array('id'=>$id,'country'=>$country);
-    $response = $this->getResponse(
-      'GET',
-      'product/get-shipping',
-      $params);
-    return json_encode($response->getData());
-  }
-
-  public function getAllShippingById($id){
-    $params = array('id'=>$id);
-    $response = $this->getResponse(
-      'GET',
-      'product/get-all-shipping',
-      $params);
-    return json_encode($response->getData());
-  }
-
-  // PRODUCT VARIATION
-
-  public function createProductVariation($object){
-    $response = $this->getResponse('POST','variant/add',$object);
-    return new WishProductVariation($response->getData());
-  }
-
-  public function getProductVariationBySKU($sku){
-    $response = $this->getResponse('GET','variant',array('sku'=>$sku));
-    return new WishProductVariation($response->getData());
-  }
-
-  public function updateProductVariation(WishProductVariation $var){
-    $params = $var->getParams(array(
-        'sku',
-        'inventory',
-        'price',
-        'shipping',
-        'enabled',
-        'size',
-        'color',
-        'msrp',
-        'shipping_time',
-        'main_image'
-      ));
-    $response = $this->getResponse('POST','variant/update',$params);
-    return "success";
-  }
-
-  public function changeProductVariationSKU($sku, $new_sku){
-    $params = array('sku'=>$sku, 'new_sku'=>$new_sku);
-    $response = $this->getResponse('POST','variant/change-sku',$params);
-    return "success";
-  }
-
-  public function enableProductVariation(WishProductVariation $var){
-    $this->enableProductVariationBySKU($var->sku);
-  }
-  public function enableProductVariationBySKU($sku){
-    $params = array('sku'=>$sku);
-    $response = $this->getResponse('POST','variant/enable',$params);
-    return "success";
-  }
-
-  public function disableProductVariation(WishProductVariation $var){
-    $this->disableProductVariationBySKU($var->sku);
-  }
-  public function disableProductVariationBySKU($sku){
-    $params = array('sku'=>$sku);
-    $response = $this->getResponse('POST','variant/disable',$params);
-    return "success";
-  }
-
-  public function updateInventoryBySKU($sku,$newInventory){
-    $params = array('sku'=>$sku,'inventory'=>$newInventory);
-    $response = $this->getResponse('POST','variant/update-inventory',$params);
-    return "success";
-  }
-
-  public function getAllProductVariations(){
-    return $this->getResponseIter(
-      'GET',
-      'variant/multi-get',
-      "Wish\Model\WishProductVariation");
-  }
-
-  // ORDER
-
-  public function getOrderById($id){
-    $response = $this->getResponse('GET','order',array('id'=>$id));
-    return new WishOrder($response->getData());
-  }
-
-  public function getAllChangedOrdersSince($time=null){
-    $params = array();
-    if($time){
-      $params['since']=$time;
+        return $response->getData();
     }
-    return $this->getResponseIter(
-      'GET',
-      'order/multi-get',
-      "Wish\Model\WishOrder",
-      $params);
-  }
 
-  public function getAllUnfulfilledOrdersSince($time=null){
-    $params = array();
+    /**
+     * @param WishProduct $product
+     */
+    public function enableProduct(WishProduct $product)
+    {
+        $this->enableProductById($product->id);
+    }
+
+    /**
+     * @param $id
+     *
+     * @return string
+     */
+    public function enableProductById($id)
+    {
+        $params = ['id' => $id];
+        $response = $this->getResponse('POST', 'product/enable', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param WishProduct $product
+     */
+    public function disableProduct(WishProduct $product)
+    {
+        $this->disableProductById($product->id);
+    }
+
+    /**
+     * @param $id
+     *
+     * @return string
+     */
+    public function disableProductById($id)
+    {
+        $params = ['id' => $id];
+        $response = $this->getResponse('POST', 'product/disable', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @return array
+     */
+    public function getAllProducts()
+    {
+        return $this->getResponseIter(
+            'GET',
+            'product/multi-get',
+            "Wish\Model\WishProduct"
+        );
+    }
+
+    /**
+     * @param WishProduct $product
+     *
+     * @return string
+     */
+    public function removeExtraImages(WishProduct $product)
+    {
+        return $this->removeExtraImagesById($product->id);
+    }
+
+    /**
+     * @param $id
+     *
+     * @return string
+     */
+    public function removeExtraImagesById($id)
+    {
+        $params = ['id' => $id];
+        $response = $this->getResponse('POST', 'product/remove-extra-images', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $id
+     * @param $country
+     * @param $price
+     *
+     * @return string
+     */
+    public function updateShippingById($id, $country, $price)
+    {
+        $params = ['id' => $id, 'country' => $country, 'price' => $price];
+        $response = $this->getResponse('POST', 'product/update-shipping', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $id
+     * @param $country
+     *
+     * @return string
+     */
+    public function getShippingById($id, $country)
+    {
+        $params = ['id' => $id, 'country' => $country];
+        $response = $this->getResponse('GET', 'product/get-shipping', $params);
+
+        return json_encode($response->getData());
+    }
+
+    /**
+     * @param $id
+     *
+     * @return string
+     */
+    public function getAllShippingById($id)
+    {
+        $params = ['id' =>$id];
+        $response = $this->getResponse('GET', 'product/get-all-shipping', $params);
+
+        return json_encode($response->getData());
+    }
+
+    // PRODUCT VARIATION
+
+    /**
+     * @param $object
+     *
+     * @return WishProductVariation
+     */
+    public function createProductVariation($object)
+    {
+        $response = $this->getResponse('POST', 'variant/add', $object);
+
+        return new WishProductVariation($response->getData());
+    }
+
+    /**
+     * @param $sku
+     *
+     * @return WishProductVariation
+     */
+    public function getProductVariationBySKU($sku)
+    {
+        $response = $this->getResponse('GET', 'variant', ['sku' => $sku]);
+
+        return new WishProductVariation($response->getData());
+    }
+
+    /**
+     * @param WishProductVariation $var
+     *
+     * @return string
+     */
+    public function updateProductVariation(WishProductVariation $var)
+    {
+        $params = $var->getParams([
+            'sku',
+            'inventory',
+            'price',
+            'shipping',
+            'enabled',
+            'size',
+            'color',
+            'msrp',
+            'shipping_time',
+            'main_image'
+        ]);
+
+        $response = $this->getResponse('POST', 'variant/update', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $sku
+     * @param $new_sku
+     *
+     * @return string
+     */
+    public function changeProductVariationSKU($sku, $new_sku)
+    {
+        $params = ['sku' => $sku, 'new_sku' => $new_sku];
+        $response = $this->getResponse('POST', 'variant/change-sku', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param WishProductVariation $var
+     */
+    public function enableProductVariation(WishProductVariation $var)
+    {
+        $this->enableProductVariationBySKU($var->sku);
+    }
+
+    /**
+     * @param $sku
+     *
+     * @return string
+     */
+    public function enableProductVariationBySKU($sku)
+    {
+        $params = ['sku' => $sku];
+        $response = $this->getResponse('POST', 'variant/enable', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param WishProductVariation $var
+     */
+    public function disableProductVariation(WishProductVariation $var)
+    {
+        $this->disableProductVariationBySKU($var->sku);
+    }
+
+    /**
+     * @param $sku
+     *
+     * @return string
+     */
+    public function disableProductVariationBySKU($sku)
+    {
+        $params = ['sku' => $sku];
+        $response = $this->getResponse('POST', 'variant/disable', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $sku
+     * @param $newInventory
+     *
+     * @return string
+     */
+    public function updateInventoryBySKU($sku, $newInventory)
+    {
+        $params = ['sku' => $sku, 'inventory' => $newInventory];
+        $response = $this->getResponse('POST', 'variant/update-inventory', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @return array
+     */
+    public function getAllProductVariations()
+    {
+        return $this->getResponseIter('GET', 'variant/multi-get', "Wish\Model\WishProductVariation");
+    }
+
+    // ORDER
+
+    /**
+     * @param $id
+     *
+     * @return WishOrder
+     */
+    public function getOrderById($id)
+    {
+        $response = $this->getResponse('GET', 'order', ['id' => $id]);
+
+        return new WishOrder($response->getData());
+    }
+
+    /**
+     * @param null $time
+     *
+     * @return array
+     */
+    public function getAllChangedOrdersSince($time = null)
+    {
+        $params = [];
+        if ($time) {
+            $params['since'] = $time;
+        }
+
+        return $this->getResponseIter('GET', 'order/multi-get', "Wish\Model\WishOrder", $params);
+    }
+
+    /**
+     * @param null $time
+     *
+     * @return array
+     */
+    public function getAllUnfulfilledOrdersSince($time = null)
+    {
+    $params = [];
     if($time){
       $params['since']=$time;
     }
@@ -288,134 +474,272 @@ class WishClient{
       'order/get-fulfill',
       "Wish\Model\WishOrder",
       $params);
-  }
-
-  public function fulfillOrderById($id,WishTracker $tracking_info){
-    $params = $tracking_info->getParams();
-    $params['id']=$id;
-    $response = $this->getResponse('POST','order/fulfill-one',$params);
-    return "success";
-  }
-
-  public function fulfillOrder(WishOrder $order, WishTracker $tracking_info){
-    return $this->fulfillOrderById($order->order_id,$tracking_info);
-  }
-
-  public function refundOrderById($id,$reason,$note=null){
-    $params = array(
-      'id'=>$id,
-      'reason_code'=>$reason);
-    if($note){
-      $params['reason_note'] = $note;
     }
-    $response = $this->getResponse('POST','order/refund',$params);
-    return "success";
-  }
 
-  public function refundOrder(WishOrder $order,$reason,$note=null){
-    return refundOrderById($order->order_id,$reason,$note);
-  }
+    /**
+     * @param             $id
+     * @param WishTracker $tracking_info
+     *
+     * @return string
+     */
+    public function fulfillOrderById($id, WishTracker $tracking_info)
+    {
+        $params = $tracking_info->getParams();
+        $params['id'] = $id;
+        $response = $this->getResponse('POST', 'order/fulfill-one', $params);
 
-  public function updateTrackingInfo(WishOrder $order,WishTracker $tracker){
-    return $this->updateTrackingInfoById($order->order_id,$tracker);
-  }
+        return $response->getData();
+    }
 
-  public function updateTrackingInfoById($id,WishTracker $tracker){
-    $params = $tracker->getParams();
-    $params['id']=$id;
-    $response = $this->getResponse('POST','order/modify-tracking',$params);
-    return "success";
-  }
+    /**
+     * @param WishOrder   $order
+     * @param WishTracker $tracking_info
+     *
+     * @return string
+     */
+    public function fulfillOrder(WishOrder $order, WishTracker $tracking_info)
+    {
+        return $this->fulfillOrderById($order->order_id, $tracking_info);
+    }
 
-  public function updateShippingInfo(WishOrder $order,WishAddres $address){
-      return $this->updateShippingInfoById($order->order_id,$address);
-  }
+    /**
+     * @param      $id
+     * @param      $reason
+     * @param null $note
+     *
+     * @return string
+     */
+    public function refundOrderById($id, $reason, $note = null)
+    {
+        $params = [
+            'id' => $id,
+            'reason_code' => $reason
+        ];
 
-  public function updateShippingInfoById($id,WishAddress $address){
-    $params = $address->getParams();
-    $params['id']=$id;
-    $response = $this->getResponse('POST','order/change-shipping',$params);
-    return "success";
-  }
+        if ($note) {
+            $params['reason_note'] = $note;
+        }
 
-  // TICKET
+        $response = $this->getResponse('POST', 'order/refund', $params);
 
-  public function getTicketById($id){
-    $params['id']=$id;
-    $response = $this->getResponse('GET','ticket',$params);
-    return new Wishticket($response->getData());
-  }
+        return $response->getData();
+    }
 
-  public function getAllActionRequiredTickets(){
-    return $this->getResponseIter(
-      'GET',
-      'ticket/get-action-required',
-      "Wish\Model\WishTicket");
-  }
+    /**
+     * @param WishOrder $order
+     * @param           $reason
+     * @param null      $note
+     *
+     * @return mixed
+     */
+    public function refundOrder(WishOrder $order, $reason, $note = null)
+    {
+        return refundOrderById($order->order_id, $reason, $note);
+    }
 
-  public function replyToTicketById($id,$reply){
-    $params['id']=$id;
-    $params['reply']=$reply;
-    $response = $this->getResponse('POST','ticket/reply',$params);
-    return "success";
-  }
+    /**
+     * @param WishOrder   $order
+     * @param WishTracker $tracker
+     *
+     * @return string
+     */
+    public function updateTrackingInfo(WishOrder $order, WishTracker $tracker)
+    {
+        return $this->updateTrackingInfoById($order->order_id, $tracker);
+    }
 
-  public function closeTicketById($id){
-    $params['id']=$id;
-    $response = $this->getResponse('POST','ticket/close',$params);
-    return "success";
-  }
+    /**
+     * @param             $id
+     * @param WishTracker $tracker
+     *
+     * @return string
+     */
+    public function updateTrackingInfoById($id, WishTracker $tracker)
+    {
+        $params = $tracker->getParams();
+        $params['id'] = $id;
+        $response = $this->getResponse('POST', 'order/modify-tracking', $params);
 
-  public function appealTicketById($id){
-    $params['id']=$id;
-    $response = $this->getResponse('POST','ticket/appeal-to-wish-support',$params);
-    return "success";
-  }
+        return $response->getData();
+    }
 
-  public function reOpenTicketById($id,$reply){
-    $params['id']=$id;
-    $params['reply']=$reply;
-    $response = $this->getResponse('POST','ticket/re-open',$params);
-    return "success";
-  }
+    /**
+     * @param WishOrder   $order
+     * @param WishAddress $address
+     *
+     * @return string
+     */
+    public function updateShippingInfo(WishOrder $order, WishAddress $address)
+    {
+        return $this->updateShippingInfoById($order->order_id, $address);
+    }
 
-  // NOTIFICATION
-  public function getAllNotifications(){
-    $response = $this->getResponse('GET','noti/fetch-unviewed');
-     return $response->getData();
-  }
+    /**
+     * @param             $id
+     * @param WishAddress $address
+     *
+     * @return string
+     */
+    public function updateShippingInfoById($id, WishAddress $address)
+    {
+        $params = $address->getParams();
+        $params['id'] = $id;
+        $response = $this->getResponse('POST', 'order/change-shipping', $params);
 
-  public function markNotificationAsViewed($id){
-    $params['id']=$id;
-    $response = $this->getResponse('POST','noti/mark-as-viewed',$params);
-    return $response->getData();
-  }
+        return $response->getData();
+    }
 
-  public function getUnviewedNotiCount(){
-     $response = $this->getResponse('GET','noti/get-unviewed-count');
-     return $response->getData();
-  }
+    // TICKET
 
-  public function getBDAnnouncemtns(){
-     $response = $this->getResponse('GET','fetch-bd-announcement');
-     return $response->getData();
-  }
+    /**
+     * @param $id
+     *
+     * @return WishTicket
+     */
+    public function getTicketById($id)
+    {
+        $params['id'] = $id;
+        $response = $this->getResponse('GET', 'ticket', $params);
+
+        return new WishTicket($response->getData());
+    }
+
+    /**
+     * @return array
+     */
+    public function getAllActionRequiredTickets()
+    {
+        return $this->getResponseIter('GET', 'ticket/get-action-required', "Wish\Model\WishTicket");
+    }
+
+    /**
+     * @param $id
+     * @param $reply
+     *
+     * @return string
+     */
+    public function replyToTicketById($id, $reply)
+    {
+        $params['id'] = $id;
+        $params['reply'] = $reply;
+        $response = $this->getResponse('POST', 'ticket/reply', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $id
+     *
+     * @return string
+     */
+    public function closeTicketById($id)
+    {
+        $params['id'] = $id;
+        $response = $this->getResponse('POST', 'ticket/close', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $id
+     *
+     * @return string
+     */
+    public function appealTicketById($id)
+    {
+        $params['id'] = $id;
+        $response = $this->getResponse('POST', 'ticket/appeal-to-wish-support', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $id
+     * @param $reply
+     *
+     * @return string
+     */
+    public function reOpenTicketById($id, $reply)
+    {
+        $params['id'] = $id;
+        $params['reply'] = $reply;
+        $response = $this->getResponse('POST', 'ticket/re-open', $params);
+
+        return $response->getData();
+    }
+
+    // NOTIFICATION
+    /**
+     * @return mixed
+     */
+    public function getAllNotifications()
+    {
+        $response = $this->getResponse('GET', 'noti/fetch-unviewed');
+
+        return $response->getData();
+    }
+
+    /**
+     * @param $id
+     *
+     * @return mixed
+     */
+    public function markNotificationAsViewed($id)
+    {
+        $params['id'] = $id;
+        $response = $this->getResponse('POST', 'noti/mark-as-viewed', $params);
+
+        return $response->getData();
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUnviewedNotiCount()
+    {
+        $response = $this->getResponse('GET', 'noti/get-unviewed-count');
+
+        return $response->getData();
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBDAnnouncemtns()
+    {
+        $response = $this->getResponse('GET', 'fetch-bd-announcement');
+
+        return $response->getData();
+    }
 
 
-  public function getSystemUpdatesNotifications(){
-     $response = $this->getResponse('GET','fetch-sys-updates-noti');
-     return $response->getData();
-  }
+    /**
+     * @return mixed
+     */
+    public function getSystemUpdatesNotifications()
+    {
+        $response = $this->getResponse('GET', 'fetch-sys-updates-noti');
 
-  public function getInfractionCount(){
-     $response = $this->getResponse('GET','count/infractions');
-     return $response->getData();
-  }
+        return $response->getData();
+    }
 
-  public function getInfractionLinks(){
-     $response = $this->getResponse('GET','get/infractions');
-     return $response->getData();
-  }
+    /**
+     * @return mixed
+     */
+    public function getInfractionCount()
+    {
+         $response = $this->getResponse('GET', 'count/infractions');
 
+         return $response->getData();
+    }
 
+    /**
+     * @return mixed
+     */
+    public function getInfractionLinks()
+    {
+         $response = $this->getResponse('GET', 'get/infractions');
+
+         return $response->getData();
+    }
 }

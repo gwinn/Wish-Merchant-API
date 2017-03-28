@@ -1,11 +1,11 @@
-<?php 
+<?php
 /**
  * Copyright 2014 Wish.com, ContextLogic or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -16,8 +16,13 @@
  */
 namespace Wish\Model;
 
-
-class WishReason{
+/**
+ * Class WishReason
+ *
+ * @package Wish\Model
+ */
+class WishReason
+{
   const NO_MORE_INVENTORY       =  0;
   const UNABLE_TO_SHIP          =  1;
   const CUSTOMER_REQUEST        =  2;
@@ -26,8 +31,4 @@ class WishReason{
   const DOES_NOT_FIT            =  8;
   const LATE_ARRIVAL_OR_MISSING =  9;
   const OTHER                   = -1;
-
-
-
-
 }

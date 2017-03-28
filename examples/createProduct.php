@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -23,7 +23,7 @@ use Wish\Exception\ServiceResponseException;
 $token = 'ACCESS_TOKEN';
 $client = new WishClient($token,'sandbox');
 
-$product = array(
+$product = [
   'name'=>'Red Shoe',
   'main_image'=>'https://www.google.com/images/srpr/logo11w.png',
   'sku'=>'prod 7',
@@ -34,7 +34,7 @@ $product = array(
   'price'=>'100',
   'inventory'=>'10',
   'randomfield'=>'12321'
-  );
+];
 
 
 try {
@@ -42,14 +42,14 @@ try {
   print_r($prod_res);
 
 
-  $product_var = array(
+  $product_var = [
     'parent_sku'=>$product['parent_sku'],
     'color'=>'red',
     'sku'=>'var 7',
     'inventory'=>10,
     'price'=>10,
     'shipping'=>10
-    );
+  ];
 
   $prod_var = $client->createProductVariation($product_var);
   print_r($prod_var);

@@ -4,8 +4,8 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- * 
+ * You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -17,27 +17,44 @@
 
 namespace Wish\Model;
 
-class WishTicket{
+/**
+ * Class WishTicket
+ *
+ * @package Wish\Model
+ */
+class WishTicket
+{
 
-  public function __construct($ticket){
-    $ticket= $ticket->Ticket;
+    /**
+     * WishTicket constructor.
+     *
+     * @param $ticket
+     */
+    public function __construct($ticket)
+    {
+        $ticket= $ticket->Ticket;
+        $vars = get_object_vars($ticket);
 
-    $vars = get_object_vars($ticket);
-    foreach ($vars as $key=>$val){
-      $this->$key = $val;
+        foreach ($vars as $key=>$val) {
+            $this->$key = $val;
+        }
     }
 
-  }
+    /**
+     * @param $keys
+     *
+     * @return array
+     */
+    public function getParams($keys)
+    {
+        $params = [];
 
-  public function getParams($keys){
-    $params = array();
-    foreach($keys as $key){
-      if(isset($this->$key)){
-        $params[$key] = $this->$key;
-      }
+        foreach($keys as $key) {
+            if(isset($this->$key)) {
+                $params[$key] = $this->$key;
+            }
+        }
+
+        return $params;
     }
-    return $params;
-  }
-
-
 }

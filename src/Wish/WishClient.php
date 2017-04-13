@@ -742,4 +742,14 @@ class WishClient
 
          return $response->getData();
     }
+
+    /**
+     * @return mixed
+     */
+    public function getShippingProviders()
+    {
+        $response = $this->getResponse('GET', 'get-shipping-carriers');
+
+        return $response->getData();
+    }
 }
